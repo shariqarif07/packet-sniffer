@@ -418,6 +418,13 @@ int main(int argc, char *argv[])
     //Starting packet capture in main thread
     pcap_loop(handle, 0, pcap_callback_func, NULL);
 
+    pthread_mutex_lock(&lock);
+    done = 1;
+    pthread_cond_signal(&cond);
+    pthread_mutex_unlock(&lock);
+
+    pthread_join(logger, NULL);
+
     //cleaning up tcp_conn objects at the time of exit, Noted in Valgrind.
     for (int i = 0; i < TCP_CONNECTION_TABLE_SIZE; i++)
     {
@@ -429,13 +436,7 @@ int main(int argc, char *argv[])
             tcp_conn = next;
         }
     }
-
-    pthread_mutex_lock(&lock);
-    done = 1;
-    pthread_cond_signal(&cond);
-    pthread_mutex_unlock(&lock);
-
-    pthread_join(logger, NULL);
+    
     pcap_close(handle);
     fclose(fileptr);
 
