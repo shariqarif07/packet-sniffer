@@ -206,6 +206,7 @@ void pcap_callback_func(u_char *args,
     char src_ip_addr[16];
     char dst_ip_addr[16];
     char line[MAX_LINE];
+    char http_buff[MAX_LINE];
 
     ethernet_header = (struct ether_header *)packet;
     if (ntohs(ethernet_header->ether_type) != ETHERTYPE_IP)
@@ -316,16 +317,23 @@ void pcap_callback_func(u_char *args,
             return;
         }
 
+        int copy_len = tcp_payload_len;
+        if (copy_len >= sizeof(http_buff)) {
+            copy_len = sizeof(http_buff) - 1;
+        }
+        memcpy(http_buff, tcp_payload, copy_len);
+        http_buff[copy_len] = '\0'; //Null-Terminated, Safe to use for String comparison.
+
         //HTTP Parsing Logic
-        if (!strncmp(tcp_payload, "GET ", 4) ||
-            !strncmp(tcp_payload, "POST ", 5))
+        if (!strncmp(http_buff, "GET ", 4) ||
+            !strncmp(http_buff, "POST ", 5))
         {
-            hostname = strstr(tcp_payload, "Host:");
+            hostname = strstr(http_buff, "Host:");
             if (hostname) {
                 sscanf(hostname, "Host: %255[^\r\n]", host_buf);
             }
 
-            useragent = strstr(tcp_payload, "User-Agent:");
+            useragent = strstr(http_buff, "User-Agent:");
             if (useragent) {
                 sscanf(useragent, "User-Agent: %511[^\r\n]", ua_buf);
             }
